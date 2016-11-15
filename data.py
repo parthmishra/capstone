@@ -3,10 +3,6 @@ Generate a dataset of Ranked Games of League of Legends using Riot's API
 
 Author: Parth Mishra
 Copyright 2016
-
-
-Credit:
-https://www.dataquest.io/blog/python-json-tutorial/
 """
 import json
 import requests
@@ -16,38 +12,12 @@ import ijson
 import urllib
 import time
 import random
+import numpy as np
+from sklearn import preprocessing
 
-apikey = "RGAPI-ba9c94aa-1b78-412d-920a-02f0c696d7c5" #API key is removed for security purposes
+apikey = "4bf388db-f2aa-4d18-9d76-b70b3186a3b9" #API key is removed for security purposes
 
-filename = 'champions.json'
 
-"""
-with open(filename, 'r') as f:
-    objects = ijson.items(f, "matches.item")
-    columns = (o for o in objects if o['teamId'] == 100)
-    for col in columns:
-        col.encode('ascii')
-"""
-
-"""
-with open(filename, 'r') as f:
-    data = ijson.items(f, 'matches.item')
-    columns = list(data)
-"""
-
-"""
-#teams = [col["teams"] for col in columns]
-participantIdentities = [col["participantIdentities"] for col in columns]
-players = participantIdentities[0]
-#players = [col["player"] for col in participantIdentities]
-#print players
-player = players[0]
-#summonerId = player[1]
-#print summonerId
-player1 = player['player']
-summonerId = player1['summonerId']
-print summonerId
-"""
 
 """
 Create Champion Features
@@ -58,8 +28,9 @@ Create Champion Features
 4. Append "_2" to Red team champion name features
 
 """
-"""
-with open('champions.json') as data_file:
+filename = 'champions.json'
+
+with open(filename) as data_file:
     data = json.load(data_file)
 
 champion_data = data["overview_data"]["data"]
@@ -67,17 +38,13 @@ champion_keys = champion_data.keys()
 championIds = {}
 for champ in champion_keys:
     Id = data["overview_data"]["data"][champ]["id"]
-    championIds[champ] = Id
-
-print championIds
+    championIds[Id] = champ
 
 blueteam = [str(i)+"_1" for i in champion_keys]
 redteam = [str(i)+"_2" for i in champion_keys]
 blueteam.extend(redteam)
 champion_names = blueteam
 
-print champion_names
-"""
 
 """
 Calculate Average Mastery Score
@@ -89,59 +56,17 @@ Calculate Average Mastery Score
 
 """
 def getMastery(summonerId, championId):
+
     response = requests.get("https://na.api.pvp.net/championmastery/location/NA1/player/"+str(summonerId)+"/champion/"+str(championId)+"?api_key="+str(apikey))
+    print "Mastery Status Code: ", response.status_code
+    print response.headers
+
+
     data = response.json()
     mastery = data["championLevel"]
 
+    time.sleep(5)
     return mastery
-
-"""
-Generate Match List
-
-Create list of 700 matches seeded by a random participant in each game
-
-100 Bronze
-100 Silver
-100 Gold
-100 Platinum
-100 Diamond
-100 Master
-100 Challenger
-
-"""
-matchlist = []
-d_seed = 48349059
-
-def getMatch(data):
-    for i in range(0,9):
-        game_type = data["games"][i]["subType"]
-        matchId = data["games"][i]["gameId"]
-        if game_type == "RANKED_FLEX_SR" and matchId not in matchlist:
-            print "Game Type: ", game_type
-
-            matchlist.append(matchId)
-            print "Match ID: ", matchId
-            rand = random.randint(0,8)
-            seed = data["games"][i]["fellowPlayers"][rand]["summonerId"]
-            return seed
-
-    seed = 48349059
-    return seed
-
-
-while len(matchlist) < 100:
-
-    response = requests.get("https://na.api.pvp.net/api/lol/na/v1.3/game/by-summoner/"+str(d_seed)+"/recent?api_key=RGAPI-ba9c94aa-1b78-412d-920a-02f0c696d7c5")
-    data = response.json()
-    d_seed = getMatch(data)
-
-    print "Matchlist length: ", len(matchlist)
-    time.sleep(2)
-
-matchlist_file = open('matchlist.txt', 'w')
-
-for match in matchlist:
-    matchlist_file.write("%s\n" % match)
 
 
 """
@@ -154,3 +79,117 @@ Training Data Sample
 
 
 """
+
+with open('matchlist_silver.txt') as f:
+    matchlist = f.readlines()
+    matchlist = [int(x) for x in matchlist]
+
+remaining_features = ['BLUE_AVG_MASTERY','RED_AVG_MASTERY','WINNER']
+features = champion_names
+features.extend(remaining_features)
+data = []
+
+counter = 0
+for matchId in matchlist:
+    participantIds = []
+    championPicks = []
+    playerIds = []
+    data_sample = [0]*269
+
+    try:
+        response = requests.get("https://na.api.pvp.net/api/lol/na/v2.2/match/"+str(matchId)+"?api_key="+str(apikey))
+        print "Match Status Code: ", response.status_code
+        print "Match Header: ", response.headers
+    except:
+        print response.status_code
+
+    if response.status_code == 200:
+        print "Successful call"
+    else:
+        print "Unsuccessful Call: ", response.status_code
+        time.sleep(30)
+
+    match_data = response.json()
+    #print match_data
+
+    for i in range(0,10):
+        participantIds.append(match_data["participantIdentities"][i]["player"]["summonerId"])
+        playerIds.append(match_data["participants"][i]["participantId"])
+        championPicks.append(match_data["participants"][i]["championId"])
+
+    """ FILL OUT CHAMPION PICKS """
+
+
+    # Blue side
+    all_champs = []
+    for i in range(0,5):
+        all_champs.append(championIds[championPicks[i]]+"_1")
+
+    for j in range(132):
+        for i in range(0,5):
+            if  all_champs[i] == blueteam[j]:
+                data_sample[j] = 1
+            elif data_sample[j] == 1:
+                data_sample[j] = 1
+            else:
+                data_sample[j] = 0
+
+    #print "Blue Team: ", all_champs
+
+
+
+    # Red Side
+    all_champs = []
+    for i in range(5,10):
+        all_champs.append(championIds[championPicks[i]]+"_2")
+
+    for j in range(132):
+        for i in range(0,5):
+            if  all_champs[i] == redteam[j]:
+                data_sample[j] = 1
+            elif data_sample[j] == 1:
+                data_sample[j] = 1
+            else:
+                data_sample[j] = 0
+
+    #print "Red Team: ", all_champs
+
+
+    """ CALCULATE AVERAGE MASTERY """
+
+    BLUE_AVG_MASTERY = 0
+    RED_AVG_MASTERY = 0
+
+
+    for i in range(0,5):
+        mastery = getMastery(participantIds[i],championPicks[i])
+        BLUE_AVG_MASTERY += mastery
+
+    for i in range(5,10):
+        mastery = getMastery(participantIds[i],championPicks[i])
+        RED_AVG_MASTERY += mastery
+
+    BLUE_AVG_MASTERY = BLUE_AVG_MASTERY/5.0
+    BLUE_AVG_MASTERY = (2*BLUE_AVG_MASTERY - 7)/(7) # normalize continuous features
+    RED_AVG_MASTERY = RED_AVG_MASTERY/5.0
+    RED_AVG_MASTERY = (2*RED_AVG_MASTERY - 7)/(7)
+
+    data_sample[266]= BLUE_AVG_MASTERY
+    data_sample[267]= RED_AVG_MASTERY
+
+    """ ADD WINNER """
+    winner = match_data["participants"][0]["stats"]["winner"]
+    if winner == True:
+        data_sample[268] = 1
+    else:
+        data_sample[268] = 0
+
+    #print "Data Sample: ", data_sample
+    data.append(data_sample)
+
+    counter += 1
+    print str(counter) + " samples added"
+
+
+df = pd.DataFrame(data, columns=features)
+df.to_csv('data_silver.csv')
