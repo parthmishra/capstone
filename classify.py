@@ -21,9 +21,12 @@ from sklearn.metrics import confusion_matrix
 from sklearn.decomposition import PCA
 from sklearn.svm import SVC
 from sklearn.linear_model import LogisticRegression
+from sklearn.linear_model import SGDClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import f1_score
+from sklearn.naive_bayes import GaussianNB
+from sklearn.tree import DecisionTreeClassifier
 
 
 ################################################################################
@@ -36,6 +39,7 @@ Data is taken from premade csv files available in the project folder.
 
 filename = 'data.csv'
 data = pd.read_csv(filename)
+
 print "Match data read succsesfully!"
 
 
@@ -109,7 +113,7 @@ Engage in preprocessing (specifically PCA) of the data to reduce input dimension
 """
 print "Preprocessing..."
 
-n_components = 50
+n_components = 30
 
 pca = PCA(svd_solver='randomized', n_components = n_components).fit(X_train)
 
@@ -137,48 +141,69 @@ for i in range(700):
 
 
 """
+def trainTestClassifier(X_train, X_test, y_train, y_test, clf_type, *params):
+
+    classifiers = {
+    "svm": SVC,
+    "lr" : LogisticRegression,
+    "rf" : RandomForestClassifier,
+    "dt" : DecisionTreeClassifier,
+    "sgd": SGDClassifier,
+    "nb" : GaussianNB
+    }
+    if clf_type == "nb":
+        clf = classifiers[clf_type]()
+    else:
+        clf = classifiers[clf_type](random_state=42)
+
+
+    if params:
+        clf = GridSearchCV(clf, params)
+
+    # train
+    clf = clf.fit(X_train, y_train)
+
+    # test
+    y_pred = clf.predict(X_test)
+    accuracy = accuracy_score(y_test, y_pred)
+
+    return accuracy
 
 
 print "Fitting classifiers..."
 
+# Parameters for Optimizer
+svm_parameters = { 'C':[1e3, 5e3, 1e4, 5e4, 1e5, 1.0, 0.5, 0.0001],
+                    'gamma': [0.0001, 0.0005, 0.001, 0.01, 0.1, 0.5, 0.7,
+                    'auto'],}
 
-# SVM
-svm_parameters = { 'C':[1e3, 5e3, 1e4, 5e4, 1e5, 1.0, 0.5, 0.0001], 'gamma': [0.0001, 0.0005, 0.001, 0.01, 0.1, 0.5, 0.7, 'auto'],}
-
-svm = GridSearchCV(SVC(kernel='rbf', random_state=42, class_weight='balanced'), svm_parameters)
-svm = svm.fit(X_train, y_train)
-
-svm_y_pred = svm.predict(X_test)
-
-print "SVM accuracy: ", accuracy_score(y_test, svm_y_pred)
-print "SVM F1 Score: ", f1_score(y_test, svm_y_pred)
-print "SVM Best Estimators: ", svm.best_estimator_
-
-# Logistic Regression
-
-lr_parameters = { 'C':[1e3, 5e3, 1e4, 5e4, 1e5, 1.0, 0.1], 'solver': ['newton-cg','lbfgs','liblinear']}
-
-lr = GridSearchCV(LogisticRegression(random_state=42, max_iter=200, class_weight='balanced'), lr_parameters)
-lr = lr.fit(X_train_pca, y_train)
-
-lr_y_pred = lr.predict(X_test_pca)
-
-print "Logistic Regression Accuracy: ", accuracy_score(y_test, lr_y_pred)
-print "Logistic Regression F1 Score: ", f1_score(y_test, lr_y_pred)
-print "Logistic Regression Best Estimators: ", lr.best_estimator_
-
-# Random Forests
+lr_parameters = { 'C':[1e3, 5e3, 1e4, 5e4, 1e5, 1.0, 0.1],
+                  'solver': ['newton-cg','lbfgs','liblinear']}
 
 rf_parameters = {"n_estimators": [5,10,15],
                 "max_depth": [3, None],
                 "bootstrap": [True,False]}
 
-#rf = GridSearchCV(RandomForestClassifier(random_state=42), rf_parameters)
-rf = RandomForestClassifier(random_state=42)
-#X_train = X_train.reshape(len(X_train), 1)
-rf = rf.fit(X_train, y_train)
-rf_y_pred = rf.predict(X_test)
 
-print "Random Forests Accuracy: ", accuracy_score(y_test, rf_y_pred)
-print "Random Forests F1 Score: ", f1_score(y_test, rf_y_pred)
-print "Random Forests Best Estimators: ", rf.best_estimator_
+classifiers = {"svm": { 'C':[1e3, 5e3, 1e4, 5e4, 1e5, 1.0, 0.5, 0.0001],
+                    'gamma': [0.0001, 0.0005, 0.001, 0.01, 0.1, 0.5, 0.7,
+                    'auto'],},
+              "lr": { 'C':[1e3, 5e3, 1e4, 5e4, 1e5, 1.0, 0.1],
+                    'solver': ['newton-cg','lbfgs','liblinear']},
+              "rf": {"n_estimators": [5,10,15],
+                              "max_depth": [3, None],
+                              "bootstrap": [True,False]},
+              "nb": {},
+              "sgd": { 'loss' : ['hinge', 'log', 'modified_huber', 'squared_hinge', 'perceptron'],
+                       'penalty' : ['none', 'l2', 'l1', 'elasticnet'],
+                       'alpha:' : [0.7,0.5,0.1,0.01,0.001,0.0001,0.00001]
+                       'learning_rate' : ['constant','optimal','invscaling']
+                    },
+              "dt": {}
+              }
+
+for clf_type, clf_params in classifiers.iteritems():
+    #print "clf_type: ", clf_type
+    #print "clf_params: ", clf_params
+    clf_accuracy = trainTestClassifier(X_train_pca, X_test_pca, y_train, y_test, clf_type, clf_params)
+    print clf_type.upper() + " Accuracy: ", clf_accuracy
