@@ -82,7 +82,7 @@ for i in range(5):
 print "Blue wins: ", num_blue_wins
 print "Red wins: ", num_red_wins
 print "Average Mastery (-1 to 1): ", avg_mastery
-#print "Top 5 Most Picked Champions: ", top_picks
+#80print "Top 5 Most Picked Champions: ", top_picks
 
 
 
@@ -165,17 +165,21 @@ def trainTestClassifier(X_train, X_test, y_train, y_test, clf_type, *params):
 
     # test
     y_pred = clf.predict(X_test)
-    accuracy = accuracy_score(y_test, y_pred)
 
-    return accuracy
+
+    clf_accuracy = accuracy_score(y_test, y_pred)
+
+    #clf_f1_score = f1_score(y_test, y_pred)
+
+
+    return clf_accuracy
 
 
 print "Fitting classifiers..."
 
 # Parameters for Optimizer
 svm_parameters = { 'C':[1e3, 5e3, 1e4, 5e4, 1e5, 1.0, 0.5, 0.0001],
-                    'gamma': [0.0001, 0.0005, 0.001, 0.01, 0.1, 0.5, 0.7,
-                    'auto'],}
+                    'gamma': [0.0001, 0.0005, 0.001, 0.01, 0.1, 0.5, 0.7, 'auto'] }
 
 lr_parameters = { 'C':[1e3, 5e3, 1e4, 5e4, 1e5, 1.0, 0.1],
                   'solver': ['newton-cg','lbfgs','liblinear']}
@@ -185,25 +189,25 @@ rf_parameters = {"n_estimators": [5,10,15],
                 "bootstrap": [True,False]}
 
 
-classifiers = {"svm": { 'C':[1e3, 5e3, 1e4, 5e4, 1e5, 1.0, 0.5, 0.0001],
-                    'gamma': [0.0001, 0.0005, 0.001, 0.01, 0.1, 0.5, 0.7,
-                    'auto'],},
-              "lr": { 'C':[1e3, 5e3, 1e4, 5e4, 1e5, 1.0, 0.1],
-                    'solver': ['newton-cg','lbfgs','liblinear']},
-              "rf": {"n_estimators": [5,10,15],
-                              "max_depth": [3, None],
-                              "bootstrap": [True,False]},
-              "nb": {},
-              "sgd": { 'loss' : ['hinge', 'log', 'modified_huber', 'squared_hinge', 'perceptron'],
-                       'penalty' : ['none', 'l2', 'l1', 'elasticnet'],
-                       'alpha:' : [0.7,0.5,0.1,0.01,0.001,0.0001,0.00001]
-                       'learning_rate' : ['constant','optimal','invscaling']
-                    },
-              "dt": {}
+classifiers = { "svm": { 'C':[1e3, 5e3, 1e4, 5e4, 1e5, 1.0, 0.5, 0.0001],
+                        'gamma': [0.0001, 0.0005, 0.001, 0.01, 0.1, 0.5, 0.7,'auto']},
+                "lr": { 'C':[1e3, 5e3, 1e4, 5e4, 1e5, 1.0, 0.1],
+                        'solver': ['newton-cg','lbfgs','liblinear']},
+                "rf": { "n_estimators": [5,10,15],
+                        "max_depth": [3, None],
+                        "bootstrap": [True,False]},
+                "nb": {},
+                "sgd": { 'loss' : ['hinge', 'log', 'modified_huber', 'squared_hinge', 'perceptron'],
+                         'penalty' : ['none', 'l2', 'l1', 'elasticnet'],
+                         'alpha' : [0.7,0.5,0.1,0.01,0.001,0.0001,0.00001],
+                         'eta0' : [0.1],
+                         'learning_rate' : ['constant','optimal','invscaling']
+                       },
+                "dt": {}
               }
 
 for clf_type, clf_params in classifiers.iteritems():
     #print "clf_type: ", clf_type
     #print "clf_params: ", clf_params
-    clf_accuracy = trainTestClassifier(X_train_pca, X_test_pca, y_train, y_test, clf_type, clf_params)
-    print clf_type.upper() + " Accuracy: ", clf_accuracy
+    clf_accuracy = trainTestClassifier(X_train_pca, X_test_pca, y_train, y_test, clf_type)
+    print clf_type.upper() + " Accuracy: " + str(clf_accuracy)

@@ -17,14 +17,46 @@ data = pd.read_csv(filename)
 print "Match data read succsesfully!"
 
 columns = list(data.columns[:-3])
+
 target = data.columns[-1]
 labels = data['WINNER']
+masteries = {}
+mastery_winrates = {}
+num_masteries = {}
 
 for index,row in data.iterrows():
+
+    blue_mastery = round(row['BLUE_AVG_MASTERY'], 1)
+    red_mastery = round(row['RED_AVG_MASTERY'], 1)
+    if blue_mastery not in num_masteries:
+        num_masteries[blue_mastery] = 1
+    else:
+        num_masteries[blue_mastery] = num_masteries[blue_mastery] + 1
+
+    if red_mastery not in num_masteries:
+        num_masteries[red_mastery] = 1
+    else:
+        num_masteries[red_mastery] = num_masteries[red_mastery] + 1
+
+    if row['WINNER'] == 0:
+        mastery = round(row['BLUE_AVG_MASTERY'], 1)
+    else:
+        mastery = round(row['RED_AVG_MASTERY'], 1)
+
+    if mastery not in masteries:
+        masteries[mastery] = 1
+    else:
+        masteries[mastery] = masteries[mastery] + 1
+
+
+
+
     blueteam = []
     blueteam_total_winrate = 0
     redteam_total_winrate = 0
     redteam = []
+
+
     for champ in columns:
         if row[champ] == 1 and champ[-2:] == "_1":
             blueteam.append(champ[:-2])
@@ -46,6 +78,13 @@ for index,row in data.iterrows():
         y_pred.append(0)
 
 # Evaluate Performance
+
+for key, value in masteries.iteritems():
+    num_samples = float(num_masteries[key])
+    mastery_winrates[key] = round( (value/num_samples)*100.0, 2)
+
+print mastery_winrates
+print "Number of Champions: ", len(champion_winrates)
 print "Number of Predictions: ", len(labels)
 print "Benchmark Accuracy: ", accuracy_score(labels, y_pred)
 print "Benchmark F1 Score: ", f1_score(labels, y_pred)
