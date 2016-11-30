@@ -15,7 +15,7 @@ import random
 import numpy as np
 from sklearn import preprocessing
 
-apikey = "4bf388db-f2aa-4d18-9d76-b70b3186a3b9" #API key is removed for security purposes
+apikey = "" #API key is removed for security purposes
 
 filename = 'matchlist_challenger.txt'
 csv_file = 'data_challenger.csv'
@@ -113,7 +113,6 @@ Training Data Sample
 
 
 """
-#filename = 'test_matches.txt' # for debugging with just 2 matches
 
 
 with open(filename) as f:
