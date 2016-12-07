@@ -173,6 +173,8 @@ def trainTestClassifier(X_train, X_test, y_train, y_test, clf_type, *params):
     #if clf_type == "dt":
     #    print clf.max_features_
     clf_accuracy = accuracy_score(y_test, y_pred)
+    print "Best Params: ", clf.best_params_
+    print "Best Estimator: ", clf.best_estimator_
 
     #clf_f1_score = f1_score(y_test, y_pred)
 
@@ -199,32 +201,26 @@ classifiers = {
                         "max_features": ['auto','sqrt','log2', None],
                         "n_estimators": [2,5,10,15,20],
                         "max_depth": [None],
-                        #"bootstrap": [True,False],
+                        "bootstrap": [True,False],
                         #"warm_start": [True,False],
                         #'oob_score'   : [True,False],
                         #'class_weight'  : ['balanced', None]
                       },
                 "dt": {
-                        'splitter' : ['best'],
+                        'splitter' : ['best','random'],
                         'max_features' : ['auto'],
                         #'criterion' : ['gini','entropy'],
-                        #'max_depth' : [None],
+                        'max_depth' : [None,1,2,3,5,6,7,8,9,10],
                         #'min_impurity_split' : [1e-7, 1e-4, 1e-10],
                         #'presort'   : [True, False],
                         #'class_weight'  : ['balanced', None]
-                      },
-                "knn" : {
-                            "n_neighbors" : [2,5,10,20],
-                            "weights"     : ['uniform','distance'],
-                            "algorithm"   : ['auto','ball_tree','kd_tree','brute'],
-                            "leaf_size"   : [10,20,30,50]
-                        }
+                      }
               }
 
 for clf_type, clf_params in classifiers.iteritems():
     #print "clf_type: ", clf_type
     #print "clf_params: ", clf_params
-    clf_accuracy = trainTestClassifier(X_train_pca, X_test_pca, y_train, y_test, clf_type)
+    clf_accuracy = trainTestClassifier(X_train_pca, X_test_pca, y_train, y_test, clf_type, clf_params)
     print clf_type.upper() + " Accuracy: " + str(clf_accuracy)
 
 
@@ -251,5 +247,12 @@ for clf_type, clf_params in classifiers.iteritems():
                          'eta0' : [0.1],
                          'learning_rate' : ['constant','optimal','invscaling']
                        },
+
+            "knn" : {
+                        "n_neighbors" : [2,5,10,20],
+                        "weights"     : ['uniform','distance'],
+                        "algorithm"   : ['auto','ball_tree','kd_tree','brute'],
+                        "leaf_size"   : [10,20,30,50]
+                    }
 
 """
